@@ -1,0 +1,47 @@
+{
+	"user": "user",
+	"repo": "mtb3-demo",
+	"tag": "0.0.1",
+	"entry": "gamemodes/main.pwn",
+	"output": "gamemodes/main.amx",
+	"dependencies": [
+		"openmultiplayer/omp-stdlib",
+		"pawn-lang/samp-stdlib@open.mp",
+		"pawn-lang/pawn-stdlib@open.mp",
+		"Pottus/ColAndreas",
+		"samp-incognito/samp-streamer-plugin",
+		"pawn-lang/sa-mp-fixes",
+		"pawn-lang/YSI-Includes@5.x",
+		"Y-Less/sscanf",
+		"Southclaws/samp-logger",
+		"Southclaws/progress2",
+		"Zeex/samp-plugin-crashdetect"
+	],
+	"local": true,
+	"builds": [
+		{
+			"args": [
+				"-;+",
+				"-(+",
+				"-\\+",
+				"-d3",
+				"-Z+"
+			],
+			"name": "main",
+			"includes": ["legacy"]
+		}
+	],
+	"runtime": {
+		"mode": "server",
+		"version": "openmp",
+		"plugins": [
+			"crashdetect",
+			"streamer",
+			"ColAndreas_static"
+		],
+		"port": 7777,
+		"filterscripts": [
+			"mapfix"
+		]
+	}
+}
