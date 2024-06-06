@@ -1,6 +1,6 @@
 # MTB3 Demo
 
-[![sampctl](https://img.shields.io/badge/sampctl-mtb3_demo-2f2f2f.svg?style=for-the-badge)](https://github.com/boxg-lv/mtb3-demo)
+[![sampctl](https://img.shields.io/badge/sampctl-mtb3_base-2f2f2f.svg?style=for-the-badge)](https://github.com/boxg-lv/mtb3-base)
 
 Showcase for SA-MP tournament base. Fully compatible with OpenMP. Contains various advanced features such as:
 - Saves player progress after disconnect
@@ -23,23 +23,14 @@ Showcase for SA-MP tournament base. Fully compatible with OpenMP. Contains vario
 - Debugging tools such as /setscore
 - Much more
 
-The demo contains advanced tournament features that are included in "mtb3-demo", but not included in "mtb3-base":
-- Randomly generated "mine field" using explosive barrels and drunk level (also contains spawning behavior override)
-- Randomly spawning "bomb field" that predicts player movement, even when drifting
-- Pickup search using "signal" with sound and a progress bar
-- Winner's lounge
-- Easter egg locations with /poi
-- Helpful tooltips on certain checkpoints
-
 ## Installation
 
 Pull the project:
 ```bash
-git clone https://github.com/boxg-lv/mtb3-demo.git
+git clone https://github.com/boxg-lv/mtb3-base.git
 ```
 
 > :warning: Code does not contain the file scriptfiles/colandreas/ColAndreas.cadb! You need to generate your own file using the [ColAndreasWizard.exe](https://github.com/Pottus/ColAndreas/releases) and place the generated file in scriptfiles/colandreas/ColAndreas.cadb!
-
 
 Use sampctl to build the code:
 ```bash
