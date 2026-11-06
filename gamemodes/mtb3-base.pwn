@@ -1,12 +1,3 @@
-/*
-This code was supposed to be under Apache 2.0 license,
-but due to complexity of licensing when multiple packages are involved,
-this code (and anything else that does not have a specific license) has the "IDFCALJUIFA" license.
-Also known as the "I DON'T FUCKING CARE ABOUT LICENSES, JUST USE IT FOR ANYTHING" license.
-
-Check README.md for details on how to use this code.
-*/
-
 //CUSTOMIZABLE_START------------------------------------------------------------------------------------
 #define TOURNAMENT_NAME "MTB Race 3"
 #define MAX_TPOINTS 10
@@ -30,13 +21,12 @@ Check README.md for details on how to use this code.
 #include <open.mp>
 #undef MAX_PLAYERS
 #define MAX_PLAYERS 50
-#include <fixes>
-#include <YSI_Visual/y_commands>
-#include <YSI_Data/y_iterate>
+#include <omp-cmd>
+#include <omp_foreach>
+#include <omp_progress2>
 #include <streamer>
 #include <sscanf2>
 #include <logger>
-#include <progress2>
 #include <colandreas>
 
 enum e_TRace {
@@ -197,6 +187,14 @@ new BombOjectToPlayerid[10240]; //Lets hope this is enough
 new Float:LastPlayerSpeed[MAX_PLAYERS][4];
 new Float:POIs[MAX_POIS][3];
 new POIcounter[MAX_PLAYERS];
+
+#if !defined isnull
+	#define isnull(%1) ((!(%1[0])) || (((%1[0]) == '\1') && (!(%1[1]))))
+#endif
+#if !defined IsNull
+	#define IsNull isnull
+#endif
+
 
 main() {
     printf("----------\n%s loaded.\n----------", TOURNAMENT_NAME);
@@ -2735,11 +2733,53 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
 	return SpeedDirection;
 }
 
+stock ShowPlayerInfoDialog(playerid) {
+    if(!IsPlayerSpawn[playerid]) {
+        SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You need to be spawned!");
+        return true;
+    }
+
+    new tmpstr[2048]; //For longer texts you might even need to increase this
+    format(tmpstr, 2048, "{E60000}======================[ {FFFFFF}Goals{E60000} ]=====================\n");
+    format(tmpstr, 2048, "%s{FFFFFF}Your objective is simple: Be the fastest one to reach the last point.\n", tmpstr);
+    format(tmpstr, 2048, "%sDuring the tournament, you may find various vehicles.\n", tmpstr);
+    format(tmpstr, 2048, "%sUse them to reach your next point faster,\n", tmpstr);
+    format(tmpstr, 2048, "%sbut sometimes a certain vehicle is better for the job than the other, choose wisely.\n", tmpstr);
+    format(tmpstr, 2048, "%sSome points will require creative ways to reach them,\n", tmpstr);
+    format(tmpstr, 2048, "%suse your surroundings and vehicle!\n\n", tmpstr);
+    format(tmpstr, 2048, "%s{E60000}======================[ {FFFFFF}Rules{E60000} ]=====================\n", tmpstr);
+    format(tmpstr, 2048, "%s- {E60000}No cheats!{FFFFFF}\n", tmpstr);
+    format(tmpstr, 2048, "%s- {E60000}No mods!{FFFFFF}\n", tmpstr);
+    format(tmpstr, 2048, "%s- {00D200}If it is in the original game, then it is allowed!\n\n", tmpstr);
+    format(tmpstr, 2048, "%s{E60000}======================[ {FFFFFF}Commands{E60000} ]=====================\n", tmpstr);
+    format(tmpstr, 2048, "%s{00D200}/help{FFFFFF} - View command's help section.\n", tmpstr);
+    format(tmpstr, 2048, "%s{00D200}/car, /veh, /bike, /plane, /boat{FFFFFF} - Summon your vehicle.\n", tmpstr);
+    format(tmpstr, 2048, "%s{00D200}/kill{FFFFFF} - Make a suicide and respawn.\n");
+    format(tmpstr, 2048, "%s{00D200}/results{FFFFFF} - View finishing times.\n", tmpstr);
+    format(tmpstr, 2048, "%s{00D200}/spec{FFFFFF} - Spectate a player (after you have finished)\n", tmpstr);
+    format(tmpstr, 2048, "%s{00D200}/poi{FFFFFF} - Set a waypoint to a POI.", tmpstr);
+
+    if(IsPlayerAdmin(playerid)) {
+        format(tmpstr, 2048, "%s\n\n{E60000}======================[ {FFFFFF}Admin{E60000} ]=====================\n", tmpstr);
+        format(tmpstr, 2048, "%s{00D200}/start{FFFFFF} - Start the tournament while preserving player scores and positions.\n", tmpstr);
+        format(tmpstr, 2048, "%s{00D200}/restart{FFFFFF} - Restart the tournament, teleports players to start and resets the score.\n", tmpstr);
+        format(tmpstr, 2048, "%s{00D200}/goto{FFFFFF} - Teleport to a player.\n", tmpstr);
+        format(tmpstr, 2048, "%s{00D200}/get{FFFFFF} - Teleport a player to you.\n", tmpstr);
+        format(tmpstr, 2048, "%s{00D200}/unlockall{FFFFFF} - Unlocks all vehicles for you.\n", tmpstr);
+        format(tmpstr, 2048, "%s{00D200}/unlock{FFFFFF} - Unlock your current vehicle for a player.\n", tmpstr);
+        format(tmpstr, 2048, "%s{00D200}/setscore{FFFFFF} - Set your current score to a specific value.\n", tmpstr);
+        format(tmpstr, 2048, "%s{00D200}/kick{FFFFFF} - Kicks a player.\n", tmpstr);
+        format(tmpstr, 2048, "%s{00D200}/ban{FFFFFF} - Bans a player.\n", tmpstr);
+        format(tmpstr, 2048, "%s{00D200}/spec{FFFFFF} - Spectate a player.\n", tmpstr);
+        format(tmpstr, 2048, "%s{00D200}/respawnvehicles{FFFFFF} - Respawn batch of vehicles.", tmpstr);
+    }
+    ShowPlayerDialog(playerid, DIALOG_HELP, DIALOG_STYLE_MSGBOX, "Help", tmpstr, "Close", "");
+    return true;
+}
+
 //----------------------------------------------------------------------------------------------------------
 
-@cmd() kill(playerid, params[], help) {
-    if(help) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /kill | Commits suicide when standing still on your foot.");
-
+CMD:kill(const playerid, params[]) {
     new PLAYER_STATE:playerstate = GetPlayerState(playerid);
     if(playerstate == PLAYER_STATE_WASTED) {
         //In some rare cases a player can be stuck in a weird state, just spawn the player again
@@ -2813,9 +2853,7 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
     return true;
 }
 
-@cmd() results(playerid, params[], help) {
-    if(help) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /results | Prints out finished player results.");
-
+CMD:results(const playerid, params[]) {
     if(!TournamentStarted) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: Tournament has not been started yet!");
         return true;
@@ -2825,9 +2863,7 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
     return true;
 }
 
-@cmd() poi(playerid, params[], help) {
-    if(help) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /poi | Set a waypoint to a POI.");
-
+CMD:poi(const playerid, params[]) {
     if(!TournamentStarted) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: Tournament has not been started yet!");
         return true;
@@ -2845,14 +2881,14 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
     return true;
 }
 
-@cmd() get(playerid, params[], help) {
+CMD:get(const playerid, params[]) {
     if(!IsPlayerAdmin(playerid)) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You are not allowed to use this command!");
         return true;
     }
 
     new targetplayerid = INVALID_PLAYER_ID;
-    if(help || sscanf(params, "u", targetplayerid)) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /get [playerid] | Teleport a player to you.");
+    if(sscanf(params, "u", targetplayerid)) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /get [playerid] | Teleport a player to you.");
 
     if(!IsPlayerSpawn[playerid]) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You need to be spawned!");
@@ -2907,7 +2943,7 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
     return true;
 }
 
-@cmd() gravity(playerid, params[], help) {
+CMD:gravity(const playerid, params[]) {
     if(!IsPlayerAdmin(playerid)) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You are not allowed to use this command!");
         return true;
@@ -2915,7 +2951,7 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
 
     new targetplayerid = INVALID_PLAYER_ID;
     new Float:gravity = 0.008;
-    if(help || sscanf(params, "uf", targetplayerid, gravity)) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /gravity [playerid] [amount] | Sets player gravity.");
+    if(sscanf(params, "uf", targetplayerid, gravity)) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /gravity [playerid] [amount] | Sets player gravity.");
 
     if(!IsPlayerSpawn[playerid]) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You need to be spawned!");
@@ -2937,14 +2973,14 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
     return true;
 }
 
-@cmd() announce(playerid, params[], help) {
+CMD:announce(const playerid, params[]) {
     if(!IsPlayerAdmin(playerid)) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You are not allowed to use this command!");
         return true;
     }
 
     new tempstr[MAX_TMPSTR];
-    if(help || sscanf(params, "s[128]", tempstr)) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /announce [text] | Announce a text to all players.");
+    if(sscanf(params, "s[128]", tempstr)) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /announce [text] | Announce a text to all players.");
 
 	foreach(new i : Player) {
         SendClientMessage(i, 0xFFA500FF, tempstr);
@@ -2952,14 +2988,14 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
     return true;
 }
 
-@cmd() kick(playerid, params[], help) {
+CMD:kick(const playerid, params[]) {
     if(!IsPlayerAdmin(playerid)) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You are not allowed to use this command!");
         return true;
     }
 
     new targetplayerid = INVALID_PLAYER_ID;
-    if(help || sscanf(params, "u", targetplayerid)) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /kick [playerid] | Kicks a player.");
+    if(sscanf(params, "u", targetplayerid)) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /kick [playerid] | Kicks a player.");
 
     if(targetplayerid == INVALID_PLAYER_ID) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: Invalid palyer!");
@@ -2970,14 +3006,14 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
     return true;
 }
 
-@cmd() ban(playerid, params[], help) {
+CMD:ban(const playerid, params[]) {
     if(!IsPlayerAdmin(playerid)) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You are not allowed to use this command!");
         return true;
     }
 
     new targetplayerid = INVALID_PLAYER_ID;
-    if(help || sscanf(params, "u", targetplayerid)) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /ban [playerid] | Bans a player.");
+    if(sscanf(params, "u", targetplayerid)) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /ban [playerid] | Bans a player.");
 
     if(targetplayerid == INVALID_PLAYER_ID) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: Invalid palyer!");
@@ -2988,14 +3024,14 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
     return true;
 }
 
-@cmd() goto(playerid, params[], help) {
+CMD:goto(const playerid, params[]) {
     if(!IsPlayerAdmin(playerid)) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You are not allowed to use this command!");
         return true;
     }
 
     new targetplayerid = INVALID_PLAYER_ID;
-    if(help || sscanf(params, "u", targetplayerid)) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /goto [playerid] | Teleport to a player.");
+    if(sscanf(params, "u", targetplayerid)) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /goto [playerid] | Teleport to a player.");
 
     if(!IsPlayerSpawn[playerid]) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You need to be spawned!");
@@ -3051,11 +3087,11 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
     return true;
 }
 
-@cmd() spec(playerid, params[], help) {
+CMD:spec(const playerid, params[]) {
     new targetplayerid = INVALID_PLAYER_ID;
     new PLAYER_STATE:playerstate = GetPlayerState(playerid);
-    if(help || (isnull(params) && playerstate != PLAYER_STATE_SPECTATING) ||
-    (sscanf(params, "u", targetplayerid) && playerstate != PLAYER_STATE_SPECTATING)) 
+
+    if((isnull(params) && playerstate != PLAYER_STATE_SPECTATING) || (sscanf(params, "u", targetplayerid) && playerstate != PLAYER_STATE_SPECTATING)) 
         return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /spec [playerid] | Spectate a player.");
 
     if(isnull(params)) {
@@ -3085,13 +3121,11 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
     return true;
 }
 
-@cmd() unlockall(playerid, params[], help) {
+CMD:unlockall(const playerid, params[]) {
     if(!IsPlayerAdmin(playerid)) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You are not allowed to use this command!");
         return true;
     }
-
-    if(help) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /unlockall | For debugging purposes, unlock all vehicles in gamemode for yourself.");
 
     if(!IsPlayerSpawn[playerid]) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You need to be spawned!");
@@ -3107,14 +3141,14 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
     return true;
 }
 
-@cmd() unlock(playerid, params[], help) {
+CMD:unlock(const playerid, params[]) {
     if(!IsPlayerAdmin(playerid)) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You are not allowed to use this command!");
         return true;
     }
 
     new targetplayerid = INVALID_PLAYER_ID;
-    if(help || sscanf(params, "u", targetplayerid)) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /unlock [playerid] | Unlock your current vehicle for a player.");
+    if(sscanf(params, "u", targetplayerid)) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /unlock [playerid] | Unlock your current vehicle for a player.");
 
     if(!IsPlayerSpawn[playerid]) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You need to be spawned!");
@@ -3150,14 +3184,14 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
 
 //todo setscore 36, then drive to 37, take a car, but vehicle is unlocked???
 
-@cmd() setscore(playerid, params[], help) {
+CMD:setscore(const playerid, params[]) {
     if(!IsPlayerAdmin(playerid)) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You are not allowed to use this command!");
         return true;
     }
 
     new playerscore = 0;
-    if(help || sscanf(params, "d", playerscore)) SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /setscore [score] | For debugging purposes, set your score to a specific value.");
+    if(sscanf(params, "d", playerscore)) SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /setscore [score] | For debugging purposes, set your score to a specific value.");
 
     if(!TournamentStarted) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: Tournament has not been started yet!");
@@ -3227,66 +3261,21 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
     return true;
 }
 
-@cmd() info(playerid, params[], help) {
-    if(!IsPlayerSpawn[playerid]) {
-        SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You need to be spawned!");
-        return true;
-    }
-
-    if(help) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /info | Print out basic information about the tournament.");
-
-    new tmpstr[2048]; //For longer texts you might even need to increase this
-    format(tmpstr, 2048, "{E60000}======================[ {FFFFFF}Goals{E60000} ]=====================\n");
-    format(tmpstr, 2048, "%s{FFFFFF}Your objective is simple: Be the fastest one to reach the last point.\n", tmpstr);
-    format(tmpstr, 2048, "%sDuring the tournament, you may find various vehicles.\n", tmpstr);
-    format(tmpstr, 2048, "%sUse them to reach your next point faster,\n", tmpstr);
-    format(tmpstr, 2048, "%sbut sometimes a certain vehicle is better for the job than the other, choose wisely.\n", tmpstr);
-    format(tmpstr, 2048, "%sSome points will require creative ways to reach them,\n", tmpstr);
-    format(tmpstr, 2048, "%suse your surroundings and vehicle!\n\n", tmpstr);
-    format(tmpstr, 2048, "%s{E60000}======================[ {FFFFFF}Rules{E60000} ]=====================\n", tmpstr);
-    format(tmpstr, 2048, "%s- {E60000}No cheats!{FFFFFF}\n", tmpstr);
-    format(tmpstr, 2048, "%s- {E60000}No mods!{FFFFFF}\n", tmpstr);
-    format(tmpstr, 2048, "%s- {00D200}If it is in the original game, then it is allowed!\n\n", tmpstr);
-    format(tmpstr, 2048, "%s{E60000}======================[ {FFFFFF}Commands{E60000} ]=====================\n", tmpstr);
-    format(tmpstr, 2048, "%s{00D200}/help{FFFFFF} - View command's help section.\n", tmpstr);
-    format(tmpstr, 2048, "%s{00D200}/car, /veh, /bike, /plane, /boat{FFFFFF} - Summon your vehicle.\n", tmpstr);
-    format(tmpstr, 2048, "%s{00D200}/kill{FFFFFF} - Make a suicide and respawn.\n");
-    format(tmpstr, 2048, "%s{00D200}/results{FFFFFF} - View finishing times.\n", tmpstr);
-    format(tmpstr, 2048, "%s{00D200}/spec{FFFFFF} - Spectate a player (after you have finished)\n", tmpstr);
-    format(tmpstr, 2048, "%s{00D200}/poi{FFFFFF} - Set a waypoint to a POI.", tmpstr);
-
-    if(IsPlayerAdmin(playerid)) {
-        format(tmpstr, 2048, "%s\n\n{E60000}======================[ {FFFFFF}Admin{E60000} ]=====================\n", tmpstr);
-        format(tmpstr, 2048, "%s{00D200}/start{FFFFFF} - Start the tournament while preserving player scores and positions.\n", tmpstr);
-        format(tmpstr, 2048, "%s{00D200}/restart{FFFFFF} - Restart the tournament, teleports players to start and resets the score.\n", tmpstr);
-        format(tmpstr, 2048, "%s{00D200}/goto{FFFFFF} - Teleport to a player.\n", tmpstr);
-        format(tmpstr, 2048, "%s{00D200}/get{FFFFFF} - Teleport a player to you.\n", tmpstr);
-        format(tmpstr, 2048, "%s{00D200}/unlockall{FFFFFF} - Unlocks all vehicles for you.\n", tmpstr);
-        format(tmpstr, 2048, "%s{00D200}/unlock{FFFFFF} - Unlock your current vehicle for a player.\n", tmpstr);
-        format(tmpstr, 2048, "%s{00D200}/setscore{FFFFFF} - Set your current score to a specific value.\n", tmpstr);
-        format(tmpstr, 2048, "%s{00D200}/kick{FFFFFF} - Kicks a player.\n", tmpstr);
-        format(tmpstr, 2048, "%s{00D200}/ban{FFFFFF} - Bans a player.\n", tmpstr);
-        format(tmpstr, 2048, "%s{00D200}/spec{FFFFFF} - Spectate a player.\n", tmpstr);
-        format(tmpstr, 2048, "%s{00D200}/respawnvehicles{FFFFFF} - Respawn batch of vehicles.", tmpstr);
-    }
-    ShowPlayerDialog(playerid, DIALOG_HELP, DIALOG_STYLE_MSGBOX, "Help", tmpstr, "Close", "");
+CMD:info(const playerid, params[]) {
+    ShowPlayerInfoDialog(playerid);
     return true;
 }
 
-@cmd() help(playerid, params[], help) {
-	if(help || IsNull(params)) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /help [command] | Display command's help section.");
-
-    Command_ReProcess(playerid, params, true);
+CMD:help(const playerid, params[]) {
+	ShowPlayerInfoDialog(playerid);
 	return true;
 }
 
-@cmd() start(playerid, params[], help) {
+CMD:start(const playerid, params[]) {
     if(!IsPlayerAdmin(playerid)) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You are not allowed to use this command!");
         return true;
     }
-
-    if(help) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /start | Start the tournament without resetting any data.");
 
     if(!IsPlayerSpawn[playerid]) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You need to be spawned!");
@@ -3324,13 +3313,11 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
     return true;
 }
 
-@cmd() restart(playerid, params[], help) {
+CMD:restart(const playerid, params[]) {
     if(!IsPlayerAdmin(playerid)) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You are not allowed to use this command!");
         return true;
     }
-
-    if(help) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /restart | Start the tournament and reset all progress.");
 
     if(!IsPlayerSpawn[playerid]) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You need to be spawned!");
@@ -3376,7 +3363,7 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
     return true;
 }
 
-@cmd() respawnvehicles(playerid, params[], help) {
+CMD:respawnvehicles(const playerid, params[]) {
     //Command is useful when players are assholes and moves spawned vehicles around
     if(!IsPlayerAdmin(playerid)) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You are not allowed to use this command!");
@@ -3384,7 +3371,7 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
     }
 
     new pointid = 0;
-    if(help || sscanf(params, "d", pointid)) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /respawnvehicles [pointid] | Respawns all vehicles that are spawned on a point ID.");
+    if(sscanf(params, "d", pointid)) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /respawnvehicles [pointid] | Respawns all vehicles that are spawned on a point ID.");
 
     if(!TournamentStarted) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: Tournament has not been started yet!");
@@ -3412,17 +3399,30 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
     return true;
 }
 
-@cmd() car(playerid, params[], help) {
-    if(help) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /car | Summons your vehicle to you.");
-
+CMD:car(const playerid, params[]) {
     CheckSummoningVehicle(playerid, false);
     return true;
 }
 
-YCMD:veh(playerid, params[], help) = car;
-YCMD:bike(playerid, params[], help) = car;
-YCMD:plane(playerid, params[], help) = car;
-YCMD:boat(playerid, params[], help) = car;
+CMD:veh(const playerid, params[]) {
+    CheckSummoningVehicle(playerid, false);
+    return true;
+}
+
+CMD:bike(const playerid, params[]) {
+    CheckSummoningVehicle(playerid, false);
+    return true;
+}
+
+CMD:plane(const playerid, params[]) {
+    CheckSummoningVehicle(playerid, false);
+    return true;
+}
+
+CMD:boat(const playerid, params[]) {
+    CheckSummoningVehicle(playerid, false);
+    return true;
+}
 
 //----------------------------------------------------------------------------------------------------------
 
