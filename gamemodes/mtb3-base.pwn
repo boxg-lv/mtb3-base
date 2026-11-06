@@ -3794,7 +3794,11 @@ public CountdownTournament() {
 
 forward ShowPickupDirection(playerid);
 public ShowPickupDirection(playerid) {
-    if(!IsPlayerSpawn[playerid]) return false; //If not spawned, then don't process anything
+    if(!IsPlayerSpawn[playerid] || Iter_Count(DirectionalPickups[playerid]) == 0) {
+        //Stop when not spawned or no directional pickups are left, otherwise the signal keeps beeping for non-directional pickups
+        DirectionTimer[playerid] = INVALID_TIMER;
+        return false;
+    }
     PlayerPlaySound(playerid, 40404, 0.0, 0.0, 0.0);
     new Float:pickupdistance = GetCurrentPickupDistance(playerid);
     UpdateSignalProgress(playerid, CalculateDistanceProgress(pickupdistance));
