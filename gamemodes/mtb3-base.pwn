@@ -603,8 +603,10 @@ public OnPlayerDeath(playerid, killerid, WEAPON:reason) {
 public OnPlayerClickPlayer(playerid, clickedplayerid, CLICK_SOURCE:source) {
     Logger_Log("OnPlayerClickPlayer", Logger_I("playerid", playerid), Logger_I("clickedplayerid", clickedplayerid), Logger_I("source", source));
     if(playerid == clickedplayerid) {
-        //If you click yourself, then exit spectate
-        StopSpectating(playerid);
+        //If you click yourself, then exit spectate, but only when actually spectating, otherwise a non-spawned player is marked as spawned
+        if(SpectatingPlayer[playerid] != INVALID_PLAYER_ID) {
+            StopSpectating(playerid);
+        }
         return true;
     } else {
         StartSpectating(playerid, clickedplayerid);
