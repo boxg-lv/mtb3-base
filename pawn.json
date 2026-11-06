@@ -2,19 +2,19 @@
 	"user": "user",
 	"repo": "mtb3-demo",
 	"tag": "0.0.1",
-	"entry": "gamemodes/main.pwn",
-	"output": "gamemodes/main.amx",
+	"entry": "gamemodes/mtb3-base.pwn",
+	"output": "gamemodes/mtb3-base.amx",
 	"dependencies": [
 		"openmultiplayer/omp-stdlib",
 		"pawn-lang/samp-stdlib@open.mp",
 		"pawn-lang/pawn-stdlib@open.mp",
 		"Pottus/ColAndreas",
 		"samp-incognito/samp-streamer-plugin",
-		"pawn-lang/sa-mp-fixes",
-		"pawn-lang/YSI-Includes@5.x",
+		"Mac-Andreas/omp-cmd",
+		"wg1337/omp-foreach",
 		"Y-Less/sscanf",
 		"Southclaws/samp-logger",
-		"Southclaws/progress2",
+		"wg1337/omp-progress2",
 		"Zeex/samp-plugin-crashdetect"
 	],
 	"local": true,
@@ -27,7 +27,7 @@
 				"-d3",
 				"-Z+"
 			],
-			"name": "main",
+			"name": "mtb3-base",
 			"includes": ["legacy"]
 		}
 	],
