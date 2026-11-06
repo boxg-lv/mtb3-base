@@ -3921,11 +3921,11 @@ public RespawnTournamentVehicle(vehiclespawnid, oldvehicleid) {
     TournamentVehicleSpawns[vehiclespawnid][T_VX], TournamentVehicleSpawns[vehiclespawnid][T_VY],
     TournamentVehicleSpawns[vehiclespawnid][T_VZ], TournamentVehicleSpawns[vehiclespawnid][T_VA],
     TournamentVehicleSpawns[vehiclespawnid][T_VC1], TournamentVehicleSpawns[vehiclespawnid][T_VC2], 300);
-    Iter_Add(CreatedVehicles, newvehicleid);
     if(!IsCreatedVehicleValid(newvehicleid)) {
         Logger_Err("Failed to respawn vehicle for spawn", Logger_I("vehiclespawnid", vehiclespawnid));
         return false;
     }
+    Iter_Add(CreatedVehicles, newvehicleid); //Only add after validity check, INVALID_VEHICLE_ID would be out of bounds
     if(TournamentVehicleSpawns[vehiclespawnid][T_VPID] != INVALID_POINT_ID) {
         new score = 0;
         Iter_Add(PointVehicles[TournamentVehicleSpawns[vehiclespawnid][T_VPID]], newvehicleid);
