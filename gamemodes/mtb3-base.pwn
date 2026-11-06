@@ -2181,9 +2181,16 @@ stock ResetTournamentVehicles() {
 
     for(new i = 0; i<MAX_VEHICLES; i++) {
         VehicleIDToSpawnID[i] = INVALID_SPAWN_ID;
+        VehicleIDToPlayerid[i] = INVALID_PLAYER_ID; //Player vehicles were destroyed above too
         for(new j = 0; j<MAX_PLAYERS; j++) {
             UnlockedVehicles[i][j] = false;
         }
+    }
+
+    //Player vehicle IDs are stale now, otherwise CleanupPlayerData() would destroy a freshly created tournament vehicle that reused the ID
+    //Only the ID is reset, PlayerVehicleModel is kept so players can still summon their vehicle
+    for(new i = 0; i<MAX_PLAYERS; i++) {
+        PlayerVehicleID[i] = INVALID_VEHICLE_ID;
     }
 
     foreach(new pointid : PointsWithVehicles) {
