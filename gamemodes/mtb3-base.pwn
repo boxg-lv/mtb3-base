@@ -188,6 +188,8 @@ new BombOjectToPlayerid[MAX_BOMB_OBJECTS] = {INVALID_PLAYER_ID, ...}; //Default 
 new Float:LastPlayerSpeed[MAX_PLAYERS][4];
 new Float:POIs[MAX_POIS][3];
 new POIcounter[MAX_PLAYERS];
+new bool:AnimLibsLoaded[MAX_PLAYERS];
+new AnimTimer[MAX_PLAYERS];
 
 #if !defined isnull
 	#define isnull(%1) ((!(%1[0])) || (((%1[0]) == '\1') && (!(%1[1]))))
@@ -430,6 +432,7 @@ public OnPlayerPickUpPlayerPickup(playerid, pickupid) {
 public OnPlayerConnect(playerid) {
     Logger_Log("OnPlayerConnect", Logger_I("playerid", playerid));
     FirstSpawn[playerid] = true;
+    AnimLibsLoaded[playerid] = false; //Every client needs to preload animation libraries
     SetPlayerTeam(playerid, NO_TEAM);
     new playername[MAX_PLAYER_NAME];
     new playerscore = 0;
@@ -460,7 +463,15 @@ public OnPlayerRequestClass(playerid, classid) {
     SetPlayerCameraLookAt(playerid, 1664.1835, -2286.6123, -1.2335);
     SetPlayerInterior(playerid, 0);
     SetPlayerVirtualWorld(playerid, 100+playerid);
-    SetRandomAnimation(playerid);
+    if(!AnimLibsLoaded[playerid]) {
+        //First animation from an unloaded library is often not played, preload all of them once
+        PreloadAnimLibs(playerid);
+        AnimLibsLoaded[playerid] = true;
+    }
+    if(AnimTimer[playerid] != INVALID_TIMER) {
+        KillTimer(AnimTimer[playerid]);
+    }
+    AnimTimer[playerid] = SetTimerEx("SetRandomAnimation", 100, false, "i", playerid); //Small delay so the preload has time to land
     PlayerTextDrawHide(playerid, PlayerScreenTD[playerid][TD_ID]); //We need this when player changes class after death
     return true;
 }
@@ -686,6 +697,11 @@ public OnPlayerDisconnect(playerid, reason) {
         PlayerScreenTD[playerid][TD_Timer] = INVALID_TIMER;
     }
     
+    if(AnimTimer[playerid] != INVALID_TIMER) {
+        KillTimer(AnimTimer[playerid]);
+        AnimTimer[playerid] = INVALID_TIMER;
+    }
+
     SendDeathMessage(INVALID_PLAYER_ID, playerid, REASON_DISCONNECT);
     return true;
 }
@@ -1361,10 +1377,26 @@ stock UpdatePlayerProgress(playerid, playerscore) {
     return true;
 }
 
-stock SetRandomAnimation(playerid) {
+stock PreloadAnimLibs(playerid) {
+    Logger_Dbg("tournament", "PreloadAnimLibs", Logger_I("playerid", playerid));
+    //Keep this in sync with the libraries used in SetRandomAnimation()
+    static const AnimLibs[][] = {
+        "BASEBALL", "BD_FIRE", "PED", "benchpress", "BLOWJOBZ", "BOMBER", "STRIP", "CASINO", "CLOTHES", "CRACK",
+        "FOOD", "DEALER", "FAT", "FIGHT_B", "KISSING", "MISC", "MUSCULAR", "RAPPING", "SMOKING"
+    };
+    for(new i = 0; i < sizeof(AnimLibs); i++) {
+        ApplyAnimation(playerid, AnimLibs[i], "null", 4.0, false, false, false, false, 0, SYNC_NONE);
+    }
+    return true;
+}
+
+forward SetRandomAnimation(playerid);
+public SetRandomAnimation(playerid) {
     Logger_Dbg("tournament", "SetRandomAnimation", Logger_I("playerid", playerid));
+    AnimTimer[playerid] = INVALID_TIMER;
+    if(IsPlayerSpawn[playerid]) return false; //Player spawned before the timer fired, don't animate a spawned player
     //This can be made as an array of strings, but this is simpler and uses less memory
-    new rand_anim = random(26);
+    new rand_anim = random(27); //Must match the amount of cases below, upper bound is exclusive
 
     switch(rand_anim) {
         case 0: ApplyAnimation(playerid, "BASEBALL", "Bat_1", 4.1, true, true, true, true, 1, SYNC_NONE);
