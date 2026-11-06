@@ -1911,28 +1911,28 @@ stock TimeConvert(time) {
         //Sure, why not, don't care, have fun
         format(tmpstr, MAX_TMPSTR, "%s%dd ", tmpstr, day);
 
-        if(hour < 9) {
+        if(hour < 10) {
             format(tmpstr, MAX_TMPSTR, "%s0%d:", tmpstr, hour);
         } else {
             format(tmpstr, MAX_TMPSTR, "%s%d:", tmpstr, hour);
         }
-        if(minute < 9) {
+        if(minute < 10) {
             format(tmpstr, MAX_TMPSTR, "%s0%d", tmpstr, minute);
         } else {
             format(tmpstr, MAX_TMPSTR, "%s%d", tmpstr, minute);
         }
     } else {
-        if(hour < 9) {
+        if(hour < 10) {
             format(tmpstr, MAX_TMPSTR, "%s0%d:", tmpstr, hour);
         } else {
             format(tmpstr, MAX_TMPSTR, "%s%d:", tmpstr, hour);
         }
-        if(minute < 9) {
+        if(minute < 10) {
             format(tmpstr, MAX_TMPSTR, "%s0%d:", tmpstr, minute);
         } else {
             format(tmpstr, MAX_TMPSTR, "%s%d:", tmpstr, minute);
         }
-        if(second < 9) {
+        if(second < 10) {
             format(tmpstr, MAX_TMPSTR, "%s0%d", tmpstr, second);
         } else {
             format(tmpstr, MAX_TMPSTR, "%s%d", tmpstr, second);
