@@ -611,6 +611,7 @@ public OnPlayerDisconnect(playerid, reason) {
     //If anyone is spectating, then stop spectating on disconnect
     foreach(new i : SpectatedBy[playerid]) {
         if(SpectatingPlayer[i] == playerid) {
+            SpectatingPlayer[i] = INVALID_PLAYER_ID; //Otherwise the spectator can't spawn or summon vehicles, PutPlayerInTournamentVehicle checks this
             TogglePlayerSpectating(i, false);
         }
     }
