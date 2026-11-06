@@ -190,6 +190,8 @@ new Float:POIs[MAX_POIS][3];
 new POIcounter[MAX_PLAYERS];
 new bool:AnimLibsLoaded[MAX_PLAYERS];
 new AnimTimer[MAX_PLAYERS];
+new bool:IsRerunning[MAX_PLAYERS]; //Finished player doing a /rerun for fun, does not affect /results
+new RerunStartTime[MAX_PLAYERS];
 
 #if !defined isnull
 	#define isnull(%1) ((!(%1[0])) || (((%1[0]) == '\1') && (!(%1[1]))))
@@ -448,6 +450,9 @@ public OnPlayerConnect(playerid) {
     TDB_GetPlayerSpeed(playername, LastPlayerSpeed[playerid][0], LastPlayerSpeed[playerid][1], LastPlayerSpeed[playerid][2], LastPlayerSpeed[playerid][3]);
     TDB_GetPlayerPickupHistory(playerid, playername);
     FinishedPos[playerid] = TDB_GetPlayerFinishPos(playername);
+    //A finished player with a score below the finish is in the middle of a /rerun, the rerun timer restarts on reconnect
+    IsRerunning[playerid] = (FinishedPos[playerid] != 0 && playerscore < T_RealTPointsCount);
+    RerunStartTime[playerid] = GetTickCount();
     SetPlayerScore(playerid, playerscore);
     CreatePlayerTextDraws(playerid);
     SendDeathMessage(INVALID_PLAYER_ID, playerid, REASON_CONNECT);
@@ -1234,6 +1239,13 @@ stock ProgressTournamentForPlayer(playerid, playerscore) {
             }
             PlayerTextDrawHide(playerid, PlayerTooltipTD[playerid][TD_ID]); //This can hide the previous tooltip suddenly, but there should not be another tooltip when finished
             PlayerTooltipTD[playerid][TD_Timer] = SetTimerEx("ShowPlayerTooltip", 8000, false, "is", playerid, "You can now spectate others by clicking on other players or by using /spec");
+        } else if(IsRerunning[playerid]) {
+            //Rerun is just for fun, show a personal time, but don't touch /results or finish positions
+            IsRerunning[playerid] = false;
+            new reruntime = GetTickCount() - RerunStartTime[playerid];
+            GameTextForPlayer(playerid, "RERUN FINISHED!", 5000, 0);
+            PlayerPlaySound(playerid, 1132, 0.0, 0.0, 0.0);
+            SendClientMessage(playerid, -1, "{00FF00}RERUN{FFFFFF}: Your rerun time is {FFFF00}%s{FFFFFF}, your official result stays the same.", TimeConvert(reruntime));
         } //else: already finished, don't do anything
         SetPlayerColor(playerid, 0xC0C0C0FF);
     }
@@ -2858,6 +2870,7 @@ stock ShowPlayerInfoDialog(playerid) {
     format(tmpstr, 2048, "%s{00D200}/car, /veh, /bike, /plane, /boat{FFFFFF} - Summon your vehicle.\n", tmpstr);
     format(tmpstr, 2048, "%s{00D200}/kill{FFFFFF} - Make a suicide and respawn.\n", tmpstr);
     format(tmpstr, 2048, "%s{00D200}/results{FFFFFF} - View finishing times.\n", tmpstr);
+    format(tmpstr, 2048, "%s{00D200}/rerun{FFFFFF} - Race again for fun after you have finished\n", tmpstr);
     format(tmpstr, 2048, "%s{00D200}/spec{FFFFFF} - Spectate a player (after you have finished)\n", tmpstr);
     format(tmpstr, 2048, "%s{00D200}/poi{FFFFFF} - Set a waypoint to a POI.", tmpstr);
 
@@ -3292,6 +3305,103 @@ CMD:unlock(const playerid, params[]) {
 
 //todo setscore 36, then drive to 37, take a car, but vehicle is unlocked???
 
+stock ResetPlayerProgress(playerid, playerscore, bool:resetfinish) {
+    //Shared by /setscore and /rerun, resets the player to a specific score and teleports to its spawn
+    //Just reset all pickup history, otherwise we can have a situation where pickups are not created because they were picked up beforehand
+    foreach (new pickupid : CreatedPickups[playerid]) {
+        DestroyPlayerPickup(playerid, pickupid);
+    }
+    CleanupPlayerData(playerid);
+    StopPlayerBombField(playerid);
+    if(DirectionTimer[playerid] != INVALID_TIMER) {
+        KillTimer(DirectionTimer[playerid]);
+        DirectionTimer[playerid] = INVALID_TIMER;
+    }
+    HidePlayerProgressBar(playerid, PlayerTDSignal[playerid]);
+    PlayerTextDrawHide(playerid, PlayerTDSignalText[playerid]);
+
+    //This command will not do anything to pickup history, but setting a score and picking up one will trigger the callback
+    if(playerscore < T_RealTPointsCount) { //Equal is for finish, but array is not that large, needs to be index-1
+        if(T_RaceData[playerscore][T_Type] == CP_PICKUP) {
+            //This will create the correct pickups in case player sets the score in middle of a pickup batch
+            CreatePlayerPickupBatch(playerid, playerscore);
+        }
+    }
+    if(resetfinish) {
+        FinishedPos[playerid] = 0;
+        IsRerunning[playerid] = false; //Admin /setscore turns a rerun back into a normal run
+    }
+    //This is needed to reset that the player has finished, this will allow the player to finish more than once, but that is expected for debugging reasons, /results will still show a single entry
+    DisablePlayerCheckpoint(playerid);
+    DisablePlayerRaceCheckpoint(playerid);
+    SetPlayerWeather(playerid, TOURNAMENT_WEATHER);
+    SetPlayerDrunkLevel(playerid, 0);
+    SetPlayerColor(playerid, 0xFFFF00FF);
+    SetPlayerScore(playerid, playerscore);
+    TogglePlayerControllable(playerid, false);
+    SetPlayerTournamentSpawn(playerid, playerscore, true);
+    if(UnfreezeTimer[playerid] != INVALID_TIMER) {
+        KillTimer(UnfreezeTimer[playerid]);
+    }
+    UnfreezeTimer[playerid] = SetTimerEx("UnfreezePlayer", 500, false, "i", playerid); //Sometimes prevents players from being spawned inside a floor
+    UpdateTournamentPos(false);
+    TDB_SavePlayerScore(playerid, playerscore);
+    AdditionalTournamentCalls(playerid, playerscore, false);
+    ProgressTournamentForPlayer(playerid, playerscore);
+    ShowPlayerCurrentObjective(playerid, playerscore); //Not always called, just call it anyways
+    TDB_SavePlayerSpeed(playerid, 0.0, 0.0, 0.0, 0.0);
+    LastPlayerSpeed[playerid][0] = 0.0;
+    LastPlayerSpeed[playerid][1] = 0.0;
+    LastPlayerSpeed[playerid][2] = 0.0;
+    LastPlayerSpeed[playerid][3] = 0.0;
+    return true;
+}
+
+stock TDB_ResetPlayerPickupHistory(playerid) {
+    Logger_Dbg("tournament", "TDB_ResetPlayerPickupHistory", Logger_I("playerid", playerid));
+    //For /rerun, deletes only this player's pickup history
+    new playername[MAX_PLAYER_NAME];
+    new DBResult:db_result;
+    new query[MAX_QUERY];
+    GetPlayerName(playerid, playername, MAX_PLAYER_NAME);
+    format(query, MAX_QUERY, "DELETE FROM `pickuphistory` WHERE `PlayerName`='%s'", playername);
+    db_result = DB_ExecuteQuery(TournamentDB, query);
+    if(db_result == DBResult:0) {
+        Logger_Err("Failed to reset pickup history for player", Logger_S("playername", playername));
+        return false;
+    }
+    DB_FreeResultSet(db_result);
+    return true;
+}
+
+CMD:rerun(const playerid, params[]) {
+    if(!IsTournamentStarted()) {
+        SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: Tournament has not been started yet!");
+        return true;
+    }
+
+    if(!IsPlayerSpawn[playerid]) {
+        SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You need to be spawned!");
+        return true;
+    }
+
+    if(FinishedPos[playerid] == 0) {
+        SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You can only rerun after you have finished!");
+        return true;
+    }
+
+    //Rerun is just for fun: FinishedPos and /results are kept, so finishing again is not counted twice
+    IsRerunning[playerid] = true;
+    RerunStartTime[playerid] = GetTickCount();
+    TDB_ResetPlayerPickupHistory(playerid);
+    //Start without a vehicle like everyone else, CleanupPlayerData() in ResetPlayerProgress() destroys the current one
+    PlayerVehicleModel[playerid] = DEFAULT_VEHICLE_MODEL;
+    TDB_SavePlayerVehicle(playerid, DEFAULT_VEHICLE_MODEL, -1, -1);
+    ResetPlayerProgress(playerid, 0, false);
+    SendClientMessage(playerid, -1, "{00FF00}SUCCESS{FFFFFF}: Rerun started! Your official result stays the same.");
+    return true;
+}
+
 CMD:setscore(const playerid, params[]) {
     if(!IsPlayerAdmin(playerid)) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You are not allowed to use this command!");
@@ -3321,50 +3431,7 @@ CMD:setscore(const playerid, params[]) {
         return true;
     }
 
-    //Just reset all pickup history, otherwise we can have a situation where pickups are not created because they were picked up beforehand
-    foreach (new pickupid : CreatedPickups[playerid]) {
-        DestroyPlayerPickup(playerid, pickupid);
-    }
-    CleanupPlayerData(playerid);
-    StopPlayerBombField(playerid);
-    if(DirectionTimer[playerid] != INVALID_TIMER) {
-        KillTimer(DirectionTimer[playerid]);
-        DirectionTimer[playerid] = INVALID_TIMER;
-    }
-    HidePlayerProgressBar(playerid, PlayerTDSignal[playerid]);
-    PlayerTextDrawHide(playerid, PlayerTDSignalText[playerid]);
-
-    //This command will not do anything to pickup history, but setting a score and picking up one will trigger the callback
-    if(playerscore < T_RealTPointsCount) { //Equal is for finish, but array is not that large, needs to be index-1
-        if(T_RaceData[playerscore][T_Type] == CP_PICKUP) {
-            //This will create the correct pickups in case player sets the score in middle of a pickup batch
-            CreatePlayerPickupBatch(playerid, playerscore);
-        }
-    }
-    FinishedPos[playerid] = 0;
-    //This is needed to reset that the player has finished, this will allow the player to finish more than once, but that is expected for debugging reasons, /results will still show a single entry
-    DisablePlayerCheckpoint(playerid);
-    DisablePlayerRaceCheckpoint(playerid);
-    SetPlayerWeather(playerid, TOURNAMENT_WEATHER);
-    SetPlayerDrunkLevel(playerid, 0);
-    SetPlayerColor(playerid, 0xFFFF00FF);
-    SetPlayerScore(playerid, playerscore);
-    TogglePlayerControllable(playerid, false);
-    SetPlayerTournamentSpawn(playerid, playerscore, true);
-    if(UnfreezeTimer[playerid] != INVALID_TIMER) {
-        KillTimer(UnfreezeTimer[playerid]);
-    }
-    UnfreezeTimer[playerid] = SetTimerEx("UnfreezePlayer", 500, false, "i", playerid); //Sometimes prevents players from being spawned inside a floor
-    UpdateTournamentPos(false);
-    TDB_SavePlayerScore(playerid, playerscore);
-    AdditionalTournamentCalls(playerid, playerscore, false);
-    ProgressTournamentForPlayer(playerid, playerscore);
-    ShowPlayerCurrentObjective(playerid, playerscore); //Not always called, just call it anyways
-    TDB_SavePlayerSpeed(playerid, 0.0, 0.0, 0.0, 0.0);
-    LastPlayerSpeed[playerid][0] = 0.0;
-    LastPlayerSpeed[playerid][1] = 0.0;
-    LastPlayerSpeed[playerid][2] = 0.0;
-    LastPlayerSpeed[playerid][3] = 0.0;
+    ResetPlayerProgress(playerid, playerscore, true);
     SendClientMessage(playerid, -1, "{00FF00}SUCCESS{FFFFFF}: Score has been set!");
     return true;
 }
@@ -3461,6 +3528,7 @@ CMD:restart(const playerid, params[]) {
         PlayerVehicleID[i] = INVALID_VEHICLE_ID;
         PlayerVehicleModel[i] = DEFAULT_VEHICLE_MODEL;
         FinishedPos[i] = 0;
+        IsRerunning[i] = false;
         if(IsPlayerSpawn[i]) {
             HidePlayerTextDraws(i, false);
             TogglePlayerControllable(i, true); //Needed because some players might join when tournament is not started and score has spawn in vehicle
@@ -3615,9 +3683,10 @@ public UpdateTournamentPos(bool:duringstart) {
     new totalplayers = 0;
     foreach(new i : Player) {
         new playerscore = GetPlayerScore(i);
-        if(playerscore >= T_RealTPointsCount) continue; //Skip finished players, we have a different variable for them
-        PlayerScores[i] = playerscore;
         OriginalPlayerScores[i] = playerscore; //We use this to later get player score a bit faster and this even isn't the dumbest optimization in this code
+        if(playerscore >= T_RealTPointsCount) continue; //Skip finished players, we have a different variable for them
+        if(IsRerunning[i]) continue; //Rerunning players are already counted in FinishedPlayers
+        PlayerScores[i] = playerscore;
         totalplayers++;
     }
 
@@ -3629,6 +3698,13 @@ public UpdateTournamentPos(bool:duringstart) {
         new index = -1;
         new playerscore = OriginalPlayerScores[i];
         if(playerscore >= T_RealTPointsCount) continue; //We skipped finished players before, now we must skip them too
+        if(IsRerunning[i]) {
+            //No live position for a rerun
+            PlayerTextDrawSetString(i, PlayerTDPosNum[i], "-");
+            PlayerTextDrawSetString(i, PlayerTDPosTxt[i], "_");
+            PlayerTextDrawSetString(i, PlayerTDPosTotal[i], "RERUN");
+            continue;
+        }
         if(InArray(playerscore, PlayerScores, index, MAX_PLAYERS)) {
             new playerpos = index+1+FinishedPlayers;
             new totalwfinishedpayers = totalplayers+FinishedPlayers;
