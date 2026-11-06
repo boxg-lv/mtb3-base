@@ -711,6 +711,7 @@ public OnVehicleDeath(vehicleid, killerid) {
         if(Iter_Count(SpectatedBy[VehicleIDToPlayerid[vehicleid]]) > 0) {
             //Seems like an OpenMP bug, player gets spawned when spectating a vehicle and it dies
             foreach(new i : SpectatedBy[VehicleIDToPlayerid[vehicleid]]) {
+                if(SpectatingPlayer[i] != VehicleIDToPlayerid[vehicleid]) continue; //Skip stale spectators that are watching someone else
                 PlayerSpectatePlayer(i, VehicleIDToPlayerid[vehicleid], SPECTATE_MODE_NORMAL);
             }
         }
@@ -1966,7 +1967,7 @@ stock StartSpectating(playerid, targetplayerid) {
 
     if(SpectatingPlayer[playerid] != INVALID_PLAYER_ID) {
         //In case user starts spectating a new player, remove the playerid from old player's iter
-        Iter_Remove(SpectatedBy[targetplayerid], playerid);
+        Iter_Remove(SpectatedBy[SpectatingPlayer[playerid]], playerid);
     }
 
     //Destroy player vehicle before starting to spectate, otherwise a rogue vehicle is spawned
