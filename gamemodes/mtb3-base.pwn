@@ -733,8 +733,8 @@ public OnPlayerStateChange(playerid, PLAYER_STATE:newstate, PLAYER_STATE:oldstat
             new vehicleid = GetPlayerVehicleID(playerid);
             foreach(new i : SpectatedBy[playerid]) {
                 if(SpectatingPlayer[i] != playerid) {
-                    //Not sure if this can happen, but just to be sure to remove dangling playerid if the dandling playerid is not even spectating the player
-                    Iter_Remove(SpectatedBy[playerid], i);
+                    //Skip dangling playerid that is not spectating this player, removing it here would break the foreach loop
+                    continue;
                 } else {
                     if(IsCreatedVehicleValid(vehicleid)) {
                         PlayerSpectateVehicle(i, vehicleid);
@@ -746,8 +746,8 @@ public OnPlayerStateChange(playerid, PLAYER_STATE:newstate, PLAYER_STATE:oldstat
         } else if(newstate == PLAYER_STATE_ONFOOT) {
             foreach(new i : SpectatedBy[playerid]) {
                 if(SpectatingPlayer[i] != playerid) {
-                    //Not sure if this can happen, but just to be sure to remove dangling playerid if the dangling playerid is not even spectating the player
-                    Iter_Remove(SpectatedBy[playerid], i);
+                    //Skip dangling playerid that is not spectating this player, removing it here would break the foreach loop
+                    continue;
                 } else {
                     PlayerSpectatePlayer(i, playerid, SPECTATE_MODE_NORMAL);
                 }
@@ -1954,8 +1954,13 @@ stock StartSpectatingChecks(playerid, targetplayerid) {
 
     //In case someone is spectating the player, stop spectating since the player is spectating someone else
     if(Iter_Count(SpectatedBy[playerid]) > 0) {
+        //Copy the IDs first, StopSpectating() removes from SpectatedBy[playerid] which would break the foreach loop
+        new spectators[MAX_PLAYERS], count = 0;
         foreach(new i : SpectatedBy[playerid]) {
-            StopSpectating(i);
+            spectators[count++] = i;
+        }
+        for(new i = 0; i < count; i++) {
+            StopSpectating(spectators[i]);
         }
     }
 
