@@ -3635,9 +3635,16 @@ public FadeScreen(playerid, counter, bool:fadein) {
         counter--;
     }
 
-    //Finishing counters
-    if(fadein && counter == 15) return true;
-    if(!fadein && counter == 1) return true;
+    //Finishing counters, checked after the last step (15 or 1) has been drawn
+    if(fadein && counter > 15) {
+        PlayerTextDrawHide(playerid, PlayerScreenTD[playerid][TD_ID]); //Fully transparent now, hide it so nothing is left on screen
+        PlayerScreenTD[playerid][TD_Timer] = INVALID_TIMER;
+        return true;
+    }
+    if(!fadein && counter < 1) {
+        PlayerScreenTD[playerid][TD_Timer] = INVALID_TIMER;
+        return true;
+    }
 
     PlayerScreenTD[playerid][TD_Timer] = SetTimerEx("FadeScreen", 50, false, "iib", playerid, counter, fadein);
     return true;
