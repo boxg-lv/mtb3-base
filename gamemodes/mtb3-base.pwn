@@ -1181,7 +1181,7 @@ stock ProgressTournamentForPlayer(playerid, playerscore) {
     return true;
 }
 
-stock ArraySortReverse(array[], left = 0, right = sizeof array) {
+stock ArraySortReverse(array[], left, right) { //right is the last valid index (size-1), both are required since a default of sizeof array points past the end
     //Code stolen then simply swapped < and > from https://github.com/Vince0789/pawn-array-util/blob/master/array_util.inc
 	new i = left, j = right;
     new pivotindex = (left + right) / 2; //Gets truncated without rounding, magic
@@ -3535,7 +3535,7 @@ public UpdateTournamentPos(bool:duringstart) {
         totalplayers++;
     }
 
-    ArraySortReverse(PlayerScores, 0 , MAX_PLAYERS-1); //Always needs to be -1, for some reasons crash-detect does not even catch out of bounds
+    ArraySortReverse(PlayerScores, 0, MAX_PLAYERS-1); //right is the last valid index, not the size
 
     //Index is not the playerid anymore, because sort, duh!
     new tmpstr[MAX_TMPSTR];
