@@ -2898,6 +2898,12 @@ CMD:poi(const playerid, params[]) {
         return true;
     }
 
+    if(T_RealTPOICount == 0) {
+        //No POIs added, otherwise POIs[0] would show an empty POI at 0.0, 0.0, 0.0
+        SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: There are no POIs in this tournament!");
+        return true;
+    }
+
     if(POIcounter[playerid] == T_RealTPOICount) POIcounter[playerid] = 0; //Reset current POI if max is reached
 
     SetPlayerMapIcon(playerid, POIICON_ID, POIs[POIcounter[playerid]][0], POIs[POIcounter[playerid]][1], POIs[POIcounter[playerid]][2], 41, 0, MAPICON_GLOBAL);
