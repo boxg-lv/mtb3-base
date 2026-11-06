@@ -3311,6 +3311,10 @@ CMD:start(const playerid, params[]) {
     foreach(new i : Player) {
         ResetPlayerTournament(i);
         CleanupPlayerData(i);
+        //CleanupPlayerData() resets pickup history, /start keeps progress so reload it from DB, otherwise picked up pickups are recreated
+        new playername[MAX_PLAYER_NAME];
+        GetPlayerName(i, playername, MAX_PLAYER_NAME);
+        TDB_GetPlayerPickupHistory(i, playername);
         if(IsPlayerSpawn[i]) {
             HidePlayerTextDraws(i, false);
             TogglePlayerSpectating(i, false); //I don't get paid enough to create a proper spectate during countdown, who even is paying me for any of this?
