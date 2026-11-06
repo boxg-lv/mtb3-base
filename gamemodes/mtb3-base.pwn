@@ -2752,9 +2752,8 @@ stock ShowPlayerInfoDialog(playerid) {
     format(tmpstr, 2048, "%s- {E60000}No mods!{FFFFFF}\n", tmpstr);
     format(tmpstr, 2048, "%s- {00D200}If it is in the original game, then it is allowed!\n\n", tmpstr);
     format(tmpstr, 2048, "%s{E60000}======================[ {FFFFFF}Commands{E60000} ]=====================\n", tmpstr);
-    format(tmpstr, 2048, "%s{00D200}/help{FFFFFF} - View command's help section.\n", tmpstr);
     format(tmpstr, 2048, "%s{00D200}/car, /veh, /bike, /plane, /boat{FFFFFF} - Summon your vehicle.\n", tmpstr);
-    format(tmpstr, 2048, "%s{00D200}/kill{FFFFFF} - Make a suicide and respawn.\n");
+    format(tmpstr, 2048, "%s{00D200}/kill{FFFFFF} - Make a suicide and respawn.\n", tmpstr);
     format(tmpstr, 2048, "%s{00D200}/results{FFFFFF} - View finishing times.\n", tmpstr);
     format(tmpstr, 2048, "%s{00D200}/spec{FFFFFF} - Spectate a player (after you have finished)\n", tmpstr);
     format(tmpstr, 2048, "%s{00D200}/poi{FFFFFF} - Set a waypoint to a POI.", tmpstr);
