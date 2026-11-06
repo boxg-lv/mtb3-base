@@ -766,9 +766,12 @@ public OnPlayerStateChange(playerid, PLAYER_STATE:newstate, PLAYER_STATE:oldstat
             }
             VehicleIDToSpawnID[vehicleid] = INVALID_SPAWN_ID;
             if(IsCreatedVehicleValid(PlayerVehicleID[playerid])) {
-                DestroyVehicle(PlayerVehicleID[playerid]);
+                //Destroy the old player vehicle, clear its tracking before the ID is forgotten, otherwise a reused ID is treated as this player's vehicle
+                new oldvehicleid = PlayerVehicleID[playerid];
+                Iter_Remove(CreatedVehicles, oldvehicleid);
+                VehicleIDToPlayerid[oldvehicleid] = INVALID_PLAYER_ID;
+                DestroyVehicle(oldvehicleid);
                 PlayerVehicleID[playerid] = INVALID_VEHICLE_ID;
-                Iter_Remove(CreatedVehicles, PlayerVehicleID[playerid]);
             }
             PlayerVehicleID[playerid] = vehicleid;
             VehicleIDToPlayerid[vehicleid] = playerid;
