@@ -2493,6 +2493,7 @@ stock TDB_SaveFinishTime(playerid, finishtime) {
     format(query, MAX_QUERY, "SELECT `PlayerTime` FROM `finish` WHERE `PlayerName`='%s'", playername);
 	db_result = DB_ExecuteQuery(TournamentDB, query);
 	if(!DB_GetRowCount(db_result)) {
+        if(db_result != DBResult:0) DB_FreeResultSet(db_result); //Free the SELECT result before it is overwritten by INSERT
         format(query, MAX_QUERY, "INSERT INTO `finish` (`PlayerName`,`PlayerPos`,`PlayerTime`) VALUES ('%s', %d, %d)", playername, FinishedPos[playerid], finishtime);
         db_result = DB_ExecuteQuery(TournamentDB, query);
         if(db_result == DBResult:0) {
@@ -2528,6 +2529,7 @@ stock TDB_GetPlayerPickupHistory(playerid, playername[]) {
 
         DB_FreeResultSet(db_result);
 	} else {
+        if(db_result != DBResult:0) DB_FreeResultSet(db_result); //Free also when no rows are found
         return false;
     }
     return true;
@@ -2569,8 +2571,8 @@ stock TDB_GetPlayerFinishPos(playername[]) {
 	db_result = DB_ExecuteQuery(TournamentDB, query);
 	if(DB_GetRowCount(db_result)) {
 		playerpos = DB_GetFieldInt(db_result, 0);
-        DB_FreeResultSet(db_result);
 	}
+    if(db_result != DBResult:0) DB_FreeResultSet(db_result); //Free also when no rows are found
     return playerpos;
 }
 
