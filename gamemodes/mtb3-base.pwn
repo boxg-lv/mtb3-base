@@ -921,6 +921,12 @@ stock DoMemoryOptimizationChecks() {
 
 stock AddPOI(Float:pX, Float:pY, Float:pZ, const label[]) {
     Logger_Dbg("tournament", "AddPOI", Logger_F("pX", pX), Logger_F("pY", pY), Logger_F("pZ", pZ), Logger_S("label", label));
+    if(T_RealTPOICount >= MAX_POIS) {
+        //Check before writing, otherwise the array write goes out of bounds before DoMemoryOptimizationChecks() runs
+        Logger_Fatal("Too many POIs, increase MAX_POIS in your .pwn file", Logger_I("MAX_POIS", MAX_POIS));
+        SendRconCommand("exit");
+        return false;
+    }
     POIs[T_RealTPOICount][0] = pX;
     POIs[T_RealTPOICount][1] = pY;
     POIs[T_RealTPOICount][2] = pZ;
@@ -943,6 +949,18 @@ stock AddTournamentVehicle(modelid, Float:spawnX, Float:spawnY, Float:spawnZ, Fl
     Logger_Dbg("tournament", "AddTournamentVehicle", Logger_F("spawnX", spawnX),
     Logger_F("spawnY", spawnY), Logger_F("spawnZ", spawnZ), Logger_F("angle", angle),
     Logger_I("colour1", colour1), Logger_I("colour2", colour2), Logger_I("pointid", pointid));
+    if(T_RealTVehicleCount >= MAX_TVEHICLES) {
+        //Check before writing, otherwise the array write goes out of bounds before DoMemoryOptimizationChecks() runs
+        Logger_Fatal("Too many tournament vehicles, increase MAX_TVEHICLES in your .pwn file", Logger_I("MAX_TVEHICLES", MAX_TVEHICLES));
+        SendRconCommand("exit");
+        return false;
+    }
+    if(pointid != INVALID_POINT_ID && (pointid < 0 || pointid >= T_RealTPointsCount)) {
+        //Check before writing, otherwise the array write goes out of bounds before DoMemoryOptimizationChecks() runs
+        Logger_Fatal("Tournament vehicle has a non existing unlock pointid", Logger_I("pointid", pointid));
+        SendRconCommand("exit");
+        return false;
+    }
     TournamentVehicleSpawns[T_RealTVehicleCount][T_VModel] = modelid;
     TournamentVehicleSpawns[T_RealTVehicleCount][T_VX] = spawnX;
     TournamentVehicleSpawns[T_RealTVehicleCount][T_VY] = spawnY;
@@ -957,6 +975,7 @@ stock AddTournamentVehicle(modelid, Float:spawnX, Float:spawnY, Float:spawnZ, Fl
         }
     }
     T_RealTVehicleCount++;
+    return true;
 }
 
 stock OverrideNextCPForPointID(pointid, Float:NextX, Float:NextY, Float:NextZ) {
@@ -1056,6 +1075,12 @@ stock PopulateVehicleBatches() {
 stock AddRacePoint(CP_TYPE, Float:RaceX, Float:RaceY, Float:RaceZ, Float:RaceSize, RaceInterior = NO_INTERIOR, bool:vehiclerequired = false, bool:spawninvehicle = false) {
     Logger_Dbg("tournament", "AddRacePoint", Logger_I("CP_TYPE", CP_TYPE), Logger_F("RaceX", RaceX), Logger_F("RaceY", RaceY), Logger_F("RaceZ", RaceZ),
     Logger_F("RaceSize", RaceSize), Logger_I("RaceInterior", RaceInterior), Logger_B("vehiclerequired", vehiclerequired), Logger_B("spawninvehicle", spawninvehicle));
+    if(T_RealTPointsCount >= MAX_TPOINTS) {
+        //Check before writing, otherwise the array write goes out of bounds before DoMemoryOptimizationChecks() runs
+        Logger_Fatal("Too many tournament points, increase MAX_TPOINTS in your .pwn file", Logger_I("MAX_TPOINTS", MAX_TPOINTS));
+        SendRconCommand("exit");
+        return false;
+    }
     T_RaceData[T_RealTPointsCount][T_Type] = CP_TYPE:CP_TYPE;
     T_RaceData[T_RealTPointsCount][T_X] = RaceX;
     T_RaceData[T_RealTPointsCount][T_Y] = RaceY;
@@ -1077,6 +1102,12 @@ stock AddCheckPoint(Float:RaceX, Float:RaceY, Float:RaceZ, Float:RaceSize, RaceI
     Logger_Dbg("tournament", "AddCheckPoint", Logger_F("RaceX", RaceX), Logger_F("RaceY", RaceY),
     Logger_F("RaceZ", RaceZ), Logger_F("RaceSize", RaceSize), Logger_I("RaceInterior", RaceInterior),
     Logger_B("vehiclerequired", vehiclerequired));
+    if(T_RealTPointsCount >= MAX_TPOINTS) {
+        //Check before writing, otherwise the array write goes out of bounds before DoMemoryOptimizationChecks() runs
+        Logger_Fatal("Too many tournament points, increase MAX_TPOINTS in your .pwn file", Logger_I("MAX_TPOINTS", MAX_TPOINTS));
+        SendRconCommand("exit");
+        return false;
+    }
     T_RaceData[T_RealTPointsCount][T_Type] = CP_TYPE:CP_STANDARD;
     T_RaceData[T_RealTPointsCount][T_X] = RaceX;
     T_RaceData[T_RealTPointsCount][T_Y] = RaceY;
@@ -1091,6 +1122,12 @@ stock AddCheckPoint(Float:RaceX, Float:RaceY, Float:RaceZ, Float:RaceSize, RaceI
 
 stock AddPickupPoint(PickupModel, Float:RaceX, Float:RaceY, Float:RaceZ, bool:direction = false) {
     Logger_Dbg("tournament", "AddPickupPoint", Logger_I("PickupModel", PickupModel), Logger_F("RaceX", RaceX), Logger_F("RaceY", RaceY), Logger_F("RaceZ", RaceZ), Logger_B("direction", direction));
+    if(T_RealTPointsCount >= MAX_TPOINTS) {
+        //Check before writing, otherwise the array write goes out of bounds before DoMemoryOptimizationChecks() runs
+        Logger_Fatal("Too many tournament points, increase MAX_TPOINTS in your .pwn file", Logger_I("MAX_TPOINTS", MAX_TPOINTS));
+        SendRconCommand("exit");
+        return false;
+    }
     T_RaceData[T_RealTPointsCount][T_Type] = CP_TYPE:CP_PICKUP;
     T_RaceData[T_RealTPointsCount][T_Model] = PickupModel;
     T_RaceData[T_RealTPointsCount][T_X] = RaceX;
