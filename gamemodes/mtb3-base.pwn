@@ -2188,6 +2188,10 @@ stock ResetTournamentVehicles() {
     for(new i = 0; i<MAX_VEHICLES; i++) {
         VehicleIDToSpawnID[i] = INVALID_SPAWN_ID;
         VehicleIDToPlayerid[i] = INVALID_PLAYER_ID; //Player vehicles were destroyed above too
+        if(VehicleRespawnTimers[i] != INVALID_TIMER) { //Pending respawns of already destroyed vehicles (e.g. /respawnvehicles) would create extra vehicles after reset
+            KillTimer(VehicleRespawnTimers[i]);
+            VehicleRespawnTimers[i] = INVALID_TIMER;
+        }
         for(new j = 0; j<MAX_PLAYERS; j++) {
             UnlockedVehicles[i][j] = false;
         }
@@ -3388,7 +3392,7 @@ CMD:respawnvehicles(const playerid, params[]) {
         return true;
     }   
 
-    if(pointid < 0 || pointid > T_RealTPointsCount) {
+    if(pointid < 0 || pointid >= T_RealTPointsCount) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: Invalid point iD!");
         return true;
     }
@@ -3399,11 +3403,20 @@ CMD:respawnvehicles(const playerid, params[]) {
     }
 
     //Destroy the vehicles and use the respawn function used for picking up spawn cars
+    //Copy the IDs first, removing from an iterator while looping over it breaks the loop
+    new vehicles[MAX_TVEHICLES], count = 0;
     foreach(new vehicleid : PointVehicles[pointid]) {
-        DestroyVehicle(vehicleid);
-        VehicleRespawnTimers[vehicleid] = SetTimerEx("RespawnTournamentVehicle", 1000, false, "ii", VehicleIDToSpawnID[vehicleid], vehicleid);
+        if(count >= MAX_TVEHICLES) break;
+        vehicles[count++] = vehicleid;
+    }
+    for(new i = 0; i < count; i++) {
+        new vehicleid = vehicles[i];
+        new spawnid = VehicleIDToSpawnID[vehicleid];
         Iter_Remove(PointVehicles[pointid], vehicleid);
         Iter_Remove(CreatedVehicles, vehicleid);
+        VehicleIDToSpawnID[vehicleid] = INVALID_SPAWN_ID; //Otherwise a reused vehicle ID is treated as a spawn vehicle
+        DestroyVehicle(vehicleid);
+        VehicleRespawnTimers[vehicleid] = SetTimerEx("RespawnTournamentVehicle", 1000, false, "ii", spawnid, vehicleid);
     }
     SendClientMessage(playerid, -1, "{00FF00}SUCCESS{FFFFFF}: Vehicles have been respawned!");
     return true;
