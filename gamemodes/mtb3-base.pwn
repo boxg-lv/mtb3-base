@@ -2944,7 +2944,7 @@ CMD:get(const playerid, params[]) {
         }
         SetVehiclePos(vehicleid, Tempx1, Tempy1, Tempz1+2);
         SetVehicleZAngle(vehicleid, Tempa1);
-        LinkVehicleToInterior(targetplayerid, interior);
+        LinkVehicleToInterior(vehicleid, interior);
     } else {
         Streamer_UpdateEx(targetplayerid, Tempx1, Tempy1, Tempz1+2);
         SetPlayerPos(targetplayerid, Tempx1, Tempy1, Tempz1+2);
