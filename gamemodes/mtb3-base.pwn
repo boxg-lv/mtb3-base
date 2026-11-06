@@ -699,6 +699,7 @@ public OnPlayerKeyStateChange(playerid, KEY:newkeys, KEY:oldkeys) {
             SummonTimer[playerid] = INVALID_TIMER;
         }
     }
+    return true;
 }
 
 public OnVehicleStreamIn(vehicleid, forplayerid) {
