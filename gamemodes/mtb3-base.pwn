@@ -2753,8 +2753,10 @@ stock Float:GetVehicleDrivingAngle(vehicleid, Float:SpeedX, Float:SpeedY, &Float
             }
         }
         new Float:DriftFriction = 1;
-        if(floatabs(SpeedDirection-TempA) < 160) { //Player is drifting, not driving backwards
-            DriftFriction = 1+4*floatabs(SpeedDirection-TempA)/180; //Some tuning can be made here, 4 works fine
+        new Float:AngleDiff = floatabs(SpeedDirection-TempA);
+        if(AngleDiff > 180) AngleDiff = 360-AngleDiff; //Wrap around 360, otherwise 355 vs 5 degrees is treated as driving backwards
+        if(AngleDiff < 160) { //Player is drifting, not driving backwards
+            DriftFriction = 1+4*AngleDiff/180; //Some tuning can be made here, 4 works fine
         }
         vehiclespeed = vehiclespeed/DriftFriction; //If a player is drifting, they will lose speed much faster, predicts the future speed a bit better
     } else {
