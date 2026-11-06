@@ -3600,6 +3600,7 @@ public UpdateTournamentPos(bool:duringstart) {
 forward StopPlayerSound(playerid);
 public StopPlayerSound(playerid) {
     Logger_Dbg("tournament", "StopPlayerSound", Logger_I("playerid", playerid));
+    SoundTimer[playerid] = INVALID_TIMER; //Timer has fired, clear the handle so a later KillTimer does not hit a stale id
     PlayerPlaySound(playerid, 0, 0.0, 0.0, 0.0);
     return true;
 }
@@ -3667,6 +3668,7 @@ public FadeScreen(playerid, counter, bool:fadein) {
 
 forward UnfreezePlayer(playerid);
 public UnfreezePlayer(playerid) {
+    UnfreezeTimer[playerid] = INVALID_TIMER; //Timer has fired, clear the handle so a later KillTimer does not hit a stale id
     TogglePlayerControllable(playerid, true);
     return true;
 }
@@ -3728,6 +3730,7 @@ public KillStage(playerid, stage) {
             DeathTimer[playerid] = SetTimerEx("KillStage", 2000, false, "ii", playerid, 2);
         }
         case 2: {
+            DeathTimer[playerid] = INVALID_TIMER; //Timer has fired, clear the handle so a later KillTimer does not hit a stale id
             SetPlayerHealth(playerid, 0);
         }
     }
@@ -3737,6 +3740,7 @@ public KillStage(playerid, stage) {
 forward CountdownTournament();
 public CountdownTournament() {
     Logger_Dbg("tournament", "CountdownTournament");
+    CountdownTimer = INVALID_TIMER; //Timer has fired, clear the handle so a later KillTimer does not hit a stale id
     if(TournamentCountdown > 3) {
         //nothing
     } else if(TournamentCountdown == 3) {
