@@ -141,7 +141,7 @@ new TournamentVehicleSpawns[MAX_TVEHICLES][e_TVehicleSpawn];
 new VehicleIDToSpawnID[MAX_VEHICLES];
 new bool:UnlockedVehicles[MAX_VEHICLES][MAX_PLAYERS];
 new Iterator:PointsWithVehicles<MAX_TPOINTS>;
-new VehicleRespawnTimers[MAX_VEHICLES];
+new SpawnRespawnTimers[MAX_TVEHICLES]; //Keyed by spawn id, vehicle ids get reused and would make respawns collide
 new PlayerVehicleModel[MAX_PLAYERS];
 new PlayerVehicleID[MAX_PLAYERS];
 new VehicleIDToPlayerid[MAX_VEHICLES];
@@ -766,7 +766,7 @@ public OnPlayerStateChange(playerid, PLAYER_STATE:newstate, PLAYER_STATE:oldstat
         //If player takes a vehicle from spawn, then recreate the vehicle after 10 seconds
         new vehicleid = GetPlayerVehicleID(playerid);
         if(IsCreatedVehicleValid(vehicleid) && VehicleIDToSpawnID[vehicleid] != INVALID_SPAWN_ID) {
-            VehicleRespawnTimers[vehicleid] = SetTimerEx("RespawnTournamentVehicle", 10000, false, "ii", VehicleIDToSpawnID[vehicleid], vehicleid);
+            StartSpawnRespawnTimer(VehicleIDToSpawnID[vehicleid], 10000);
             if(TournamentVehicleSpawns[VehicleIDToSpawnID[vehicleid]][T_VPID] != INVALID_POINT_ID) {
                 Iter_Remove(PointVehicles[TournamentVehicleSpawns[VehicleIDToSpawnID[vehicleid]][T_VPID]], vehicleid);
             } else {
@@ -2188,9 +2188,12 @@ stock ResetTournamentVehicles() {
     Logger_Dbg("tournament", "ResetTournamentVehicles");
     foreach (new vehicleid : CreatedVehicles) {
         DestroyVehicle(vehicleid);
-        if(VehicleRespawnTimers[vehicleid] != INVALID_TIMER) {
-            KillTimer(VehicleRespawnTimers[vehicleid]);
-            VehicleRespawnTimers[vehicleid] = INVALID_TIMER;
+    }
+    for(new i = 0; i<MAX_TVEHICLES; i++) {
+        //Pending respawns would create extra vehicles after reset
+        if(SpawnRespawnTimers[i] != INVALID_TIMER) {
+            KillTimer(SpawnRespawnTimers[i]);
+            SpawnRespawnTimers[i] = INVALID_TIMER;
         }
     }
     Iter_Clear(CreatedVehicles);
@@ -2199,10 +2202,6 @@ stock ResetTournamentVehicles() {
     for(new i = 0; i<MAX_VEHICLES; i++) {
         VehicleIDToSpawnID[i] = INVALID_SPAWN_ID;
         VehicleIDToPlayerid[i] = INVALID_PLAYER_ID; //Player vehicles were destroyed above too
-        if(VehicleRespawnTimers[i] != INVALID_TIMER) { //Pending respawns of already destroyed vehicles (e.g. /respawnvehicles) would create extra vehicles after reset
-            KillTimer(VehicleRespawnTimers[i]);
-            VehicleRespawnTimers[i] = INVALID_TIMER;
-        }
         for(new j = 0; j<MAX_PLAYERS; j++) {
             UnlockedVehicles[i][j] = false;
         }
@@ -3429,7 +3428,7 @@ CMD:respawnvehicles(const playerid, params[]) {
         Iter_Remove(CreatedVehicles, vehicleid);
         VehicleIDToSpawnID[vehicleid] = INVALID_SPAWN_ID; //Otherwise a reused vehicle ID is treated as a spawn vehicle
         DestroyVehicle(vehicleid);
-        VehicleRespawnTimers[vehicleid] = SetTimerEx("RespawnTournamentVehicle", 1000, false, "ii", spawnid, vehicleid);
+        StartSpawnRespawnTimer(spawnid, 1000);
     }
     SendClientMessage(playerid, -1, "{00FF00}SUCCESS{FFFFFF}: Vehicles have been respawned!");
     return true;
@@ -3911,10 +3910,20 @@ public SummonTournamentVehicle(playerid, Float:pX, Float:pY, Float:pZ) {
     return true;
 }
 
-forward RespawnTournamentVehicle(vehiclespawnid, oldvehicleid);
-public RespawnTournamentVehicle(vehiclespawnid, oldvehicleid) {
-    Logger_Dbg("tournament", "RespawnTournamentVehicle", Logger_I("vehiclespawnid", vehiclespawnid), Logger_I("oldvehicleid", oldvehicleid));
-    if(VehicleRespawnTimers[oldvehicleid] == INVALID_TIMER) return false; //Something canceled the timer
+stock StartSpawnRespawnTimer(vehiclespawnid, delay) {
+    if(vehiclespawnid < 0 || vehiclespawnid >= T_RealTVehicleCount) return false;
+    if(SpawnRespawnTimers[vehiclespawnid] != INVALID_TIMER) {
+        KillTimer(SpawnRespawnTimers[vehiclespawnid]); //Only one pending respawn per spawn
+    }
+    SpawnRespawnTimers[vehiclespawnid] = SetTimerEx("RespawnTournamentVehicle", delay, false, "i", vehiclespawnid);
+    return true;
+}
+
+forward RespawnTournamentVehicle(vehiclespawnid);
+public RespawnTournamentVehicle(vehiclespawnid) {
+    Logger_Dbg("tournament", "RespawnTournamentVehicle", Logger_I("vehiclespawnid", vehiclespawnid));
+    if(SpawnRespawnTimers[vehiclespawnid] == INVALID_TIMER) return false; //Something canceled the timer
+    SpawnRespawnTimers[vehiclespawnid] = INVALID_TIMER;
 
     //The vehicle is not created when nobody is online. Since this is only an issue during testing, then a proper fix is not implemented. Issue is caused by OpenMP
     new newvehicleid = CreateVehicle(TournamentVehicleSpawns[vehiclespawnid][T_VModel],
@@ -3943,6 +3952,5 @@ public RespawnTournamentVehicle(vehiclespawnid, oldvehicleid) {
     }
 
     VehicleIDToSpawnID[newvehicleid] = vehiclespawnid;
-    VehicleRespawnTimers[oldvehicleid] = 0;
     return true;
 }
