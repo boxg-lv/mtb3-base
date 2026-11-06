@@ -1451,6 +1451,7 @@ stock DetermineSpawnPoint(pointid, playerid) {
             pointid = T_RaceData[pointid][T_BStart]-1;
         }
         //If there were no checkpoints, then BStart will be INVALID_POINT_ID and later we simply set the defualt spawn
+        if(pointid < 0) return INVALID_POINT_ID; //Pickup batch starts at pointid 0, there is no point before it, use default spawn and prevent OOB below
 
         //When we have a special point that needs overriden spawn
         if(T_RaceData[pointid][T_SpawnOverride] != INVALID_POINT_ID) {
