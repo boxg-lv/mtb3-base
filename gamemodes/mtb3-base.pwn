@@ -2758,7 +2758,7 @@ stock CreateMineField(Float:MinX, Float:MinY, Float:MinZ, Float:MaxX, Float:MaxY
             new random_slot = random(4);
             if(random_slot == 3) { //25% chance that a mine is spawned
                 new Float:FoundX, Float:FoundY, Float:FoundZ;
-                CA_RayCastLine(i, j, MaxZ, i, j, MinZ, FoundX, FoundY, FoundZ);
+                if(!CA_RayCastLine(i, j, MaxZ, i, j, MinZ, FoundX, FoundY, FoundZ)) continue; //No ground found between MinZ and MaxZ, don't place a mine at Z 0
                 //Little bit into the ground so players can't push the mines
                 CreateDynamicObject(1225, i, j, FoundZ+0.15, 0, 0, 0, -1, -1, -1, 15.0);
             }
@@ -3577,7 +3577,12 @@ public DropPlayerBomb(playerid) {
     TempX += floatrand(-2, 2)+bombdistance*floatsin(-TempA, degrees);
     TempY += floatrand(-2, 2)+bombdistance*floatcos(-TempA, degrees);
     TempZ += 50;
-    CA_RayCastLine(TempX, TempY, TempZ, TempX, TempY, 0, FoundX, FoundY, FoundZ);
+    if(!CA_RayCastLine(TempX, TempY, TempZ, TempX, TempY, 0, FoundX, FoundY, FoundZ)) {
+        //Nothing was hit (e.g. water), output is not set, so use sea level at the target position instead of 0.0, 0.0, 0.0
+        FoundX = TempX;
+        FoundY = TempY;
+        FoundZ = 0.0;
+    }
     new STREAMER_TAG_OBJECT:objectid = CreateDynamicObject(2918, FoundX, FoundY, TempZ, 0, 0, 0, -1, -1, playerid, 100.0);
     if(objectid == INVALID_STREAMER_ID || objectid == INVALID_OBJECT_ID) return false; //Streamer returns 0 on failure
     if(objectid >= MAX_BOMB_OBJECTS) {
