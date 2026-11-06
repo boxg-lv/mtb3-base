@@ -2166,6 +2166,8 @@ stock GetPlayerCurrentCP(playerid) {
 stock NumberToPosition(position) {
     Logger_Dbg("tournament", "NumberToPosition", Logger_I("position", position));
     new lastdigit = position % 10;
+    new lasttwodigits = position % 100;
+    if(lasttwodigits >= 11 && lasttwodigits <= 13) lastdigit = 0; //11TH, 12TH, 13TH, not 11ST, 12ND, 13RD
     new tmpstr[MAX_TMPSTR];
     switch(lastdigit) {
         case 1: {
