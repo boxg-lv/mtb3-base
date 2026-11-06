@@ -270,6 +270,12 @@ stock SetupTournamentExtras() {
 
 public OnGameModeInit() {
     DisableCrashDetectLongCall(); //Longcalls broken in OMP
+    if(GetMaxPlayers() > MAX_PLAYERS) {
+        //All per-player arrays are sized by MAX_PLAYERS, higher playerids would cause out of bounds errors
+        Logger_Fatal("Server max_players is higher than MAX_PLAYERS, lower max_players in config.json or increase MAX_PLAYERS", Logger_I("max_players", GetMaxPlayers()), Logger_I("MAX_PLAYERS", MAX_PLAYERS));
+        SendRconCommand("exit");
+        return false;
+    }
     if(!CA_Init()) {
         Logger_Fatal("Could not load ColAndreas map, ensure you have generated ColAndreas.cadb using the Wizard!");
         SendRconCommand("exit");
