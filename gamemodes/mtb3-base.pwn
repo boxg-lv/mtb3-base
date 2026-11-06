@@ -3202,7 +3202,7 @@ CMD:setscore(const playerid, params[]) {
     }
 
     new playerscore = 0;
-    if(sscanf(params, "d", playerscore)) SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /setscore [score] | For debugging purposes, set your score to a specific value.");
+    if(sscanf(params, "d", playerscore)) return SendClientMessage(playerid, -1, "{FFFF00}>HELP:{FFFFFF} /setscore [score] | For debugging purposes, set your score to a specific value.");
 
     if(!TournamentStarted) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: Tournament has not been started yet!");
