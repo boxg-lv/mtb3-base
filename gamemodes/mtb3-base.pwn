@@ -347,6 +347,7 @@ public OnPlayerEnterRaceCheckpoint(playerid) {
     Logger_Log("OnPlayerEnterRaceCheckpoint", Logger_I("playerid", playerid));
     if(!TournamentStarted) return false; //Not possible, but why not
     new playerscore = GetPlayerScore(playerid);
+    if(playerscore >= T_RealTPointsCount) return false; //Finished players have no checkpoint, prevents out of bounds
     if(T_RaceData[playerscore][T_Vehreq] == true && GetPlayerState(playerid) != PLAYER_STATE_DRIVER) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You need to be in a vehicle!");
         return false; //Vehicle is required
@@ -367,6 +368,7 @@ public OnPlayerEnterCheckpoint(playerid) {
     Logger_Log("OnPlayerEnterCheckpoint", Logger_I("playerid", playerid));
     if(!TournamentStarted) return false; //Not possible, but why not
     new playerscore = GetPlayerScore(playerid);
+    if(playerscore >= T_RealTPointsCount) return false; //Finished players have no checkpoint, prevents out of bounds
     if(T_RaceData[playerscore][T_Vehreq] == true && GetPlayerState(playerid) != PLAYER_STATE_DRIVER) {
         SendClientMessage(playerid, -1, "{FF0000}ERROR{FFFFFF}: You need to be in a vehicle!");
         return false; //Vehicle is required
@@ -1304,7 +1306,7 @@ stock IsCreatedVehicleValid(vehicleid) {
 stock UpdatePlayerProgress(playerid, playerscore) {
     Logger_Dbg("tournament", "UpdatePlayerProgress", Logger_I("playerid", playerid), Logger_I("playerscore", playerscore));
     if(!TournamentStarted) return false; //If not started, then no progress
-    if(playerscore == T_RealTPointsCount) return false; //No progress for finished
+    if(playerscore >= T_RealTPointsCount) return false; //No progress for finished
 
     new foundpoints, totalpoints;
     new tmpstr[MAX_TMPSTR];
@@ -2273,7 +2275,7 @@ stock UnlockTVehiclesForPlayer(playerid, targetvehicleid, score, vehiclespawnid 
         if(vehiclespawnid != INVALID_SPAWN_ID) {
             //Get the pointid of the target vehicle
             if(TournamentVehicleSpawns[vehiclespawnid][T_VPID] != INVALID_POINT_ID) {
-                if(score == T_RealTPointsCount) score--; //Special case for finished players, lets just assume the last pointid to unlock last batch vehicles
+                if(score >= T_RealTPointsCount) score = T_RealTPointsCount-1; //Special case for finished players, lets just assume the last pointid to unlock last batch vehicles
                 if(TournamentVehicleSpawns[vehiclespawnid][T_VPID] == T_RaceData[score][T_VLast]) {
                     //If target vehicle last batch matches with the score, the unlock it
                     UnlockedVehicles[targetvehicleid][playerid] = true;
@@ -3535,7 +3537,7 @@ public UpdateTournamentPos(bool:duringstart) {
     new totalplayers = 0;
     foreach(new i : Player) {
         new playerscore = GetPlayerScore(i);
-        if(playerscore == T_RealTPointsCount) continue; //Skip finished players, we have a different variable for them
+        if(playerscore >= T_RealTPointsCount) continue; //Skip finished players, we have a different variable for them
         PlayerScores[i] = playerscore;
         OriginalPlayerScores[i] = playerscore; //We use this to later get player score a bit faster and this even isn't the dumbest optimization in this code
         totalplayers++;
@@ -3548,7 +3550,7 @@ public UpdateTournamentPos(bool:duringstart) {
     foreach(new i : SpawnedPlayers) {
         new index = -1;
         new playerscore = OriginalPlayerScores[i];
-        if(playerscore == T_RealTPointsCount) continue; //We skipped finished players before, now we must skip them too
+        if(playerscore >= T_RealTPointsCount) continue; //We skipped finished players before, now we must skip them too
         if(InArray(playerscore, PlayerScores, index, MAX_PLAYERS)) {
             new playerpos = index+1+FinishedPlayers;
             new totalwfinishedpayers = totalplayers+FinishedPlayers;
