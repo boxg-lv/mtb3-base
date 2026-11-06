@@ -2239,21 +2239,15 @@ stock ResetTournamentVehicles() {
 stock UnlockTVehiclesForPlayer(playerid, targetvehicleid, score, vehiclespawnid = INVALID_SPAWN_ID) {
     Logger_Dbg("tournament", "UnlockTVehiclesForPlayer", Logger_I("playerid", playerid), Logger_I("targetvehicleid", targetvehicleid), Logger_I("score", score));
     if(!IsCreatedVehicleValid(targetvehicleid)) { //When targetvehicleid is not specified, used for unlocking batches
-        if(score == T_RealTPointsCount) score--; //Special case for finished players, lets just assume the last pointid to unlock last batch vehicles
-        if(T_RaceData[score][T_VLast] != INVALID_POINT_ID) {
-            //If last vehicle batch pointid is set, then we can lock all cars that were previously unlocked
-            foreach(new pointid : PointsWithVehicles) {
-                if(pointid < T_RaceData[score][T_VLast]) { //We should only process lower pointid since higher numbers should be locked
-                    foreach(new vehicleid : PointVehicles[pointid]) {
-                        UnlockedVehicles[vehicleid][playerid] = false;
-                        SetVehicleParamsForPlayer(vehicleid, playerid, false, true);
-                    }
-                }
-            }
-            //Unlock vehicles at the last batch
-            foreach(new vehicleid : PointVehicles[T_RaceData[score][T_VLast]]) {
-                UnlockedVehicles[vehicleid][playerid] = true;
-                SetVehicleParamsForPlayer(vehicleid, playerid, false, false);
+        if(score >= T_RealTPointsCount) score = T_RealTPointsCount-1; //Special case for finished players, lets just assume the last pointid to unlock last batch vehicles
+        new lastpointid = T_RaceData[score][T_VLast];
+        //Unlock only the last vehicle batch and lock every other batch, including higher ones (score can be lowered with /setscore)
+        //If lastpointid is INVALID_POINT_ID, then all batches get locked
+        foreach(new pointid : PointsWithVehicles) {
+            new bool:unlock = (pointid == lastpointid);
+            foreach(new vehicleid : PointVehicles[pointid]) {
+                UnlockedVehicles[vehicleid][playerid] = unlock;
+                SetVehicleParamsForPlayer(vehicleid, playerid, false, !unlock);
             }
         }
     } else {
