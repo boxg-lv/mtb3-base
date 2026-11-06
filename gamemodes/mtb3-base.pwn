@@ -183,7 +183,8 @@ new Iterator:BlockedCarSpawns<MAX_TPOINTS>;
 new PlayerBar:PlayerTDSignal[MAX_PLAYERS];
 new STREAMER_TAG_AREA:BombField = INVALID_STREAMER_ID;
 new BombingTimers[MAX_PLAYERS][2];
-new BombOjectToPlayerid[10240]; //Lets hope this is enough
+#define MAX_BOMB_OBJECTS 10240 //Lets hope this is enough
+new BombOjectToPlayerid[MAX_BOMB_OBJECTS] = {INVALID_PLAYER_ID, ...}; //Default must be INVALID_PLAYER_ID, otherwise any moved object belongs to playerid 0
 new Float:LastPlayerSpeed[MAX_PLAYERS][4];
 new Float:POIs[MAX_POIS][3];
 new POIcounter[MAX_PLAYERS];
@@ -829,6 +830,7 @@ public OnPlayerLeaveDynamicArea(playerid, areaid) {
 public OnDynamicObjectMoved(objectid) {
     Logger_Dbg("tournament", "OnDynamicObjectMoved", Logger_I("objectid", objectid));
     //When bomb touches the ground, make a sounds and later create explosion
+    if(objectid < 0 || objectid >= MAX_BOMB_OBJECTS) return true; //Not a bomb, prevents out of bounds
     if(BombOjectToPlayerid[objectid] != INVALID_PLAYER_ID) {
         SetTimerEx("DestroyBomb", 500, false, "ii", objectid, BombOjectToPlayerid[objectid]);
         new Float:TempX, Float:TempY, Float:TempZ;
@@ -3502,7 +3504,11 @@ public DropPlayerBomb(playerid) {
     TempZ += 50;
     CA_RayCastLine(TempX, TempY, TempZ, TempX, TempY, 0, FoundX, FoundY, FoundZ);
     new STREAMER_TAG_OBJECT:objectid = CreateDynamicObject(2918, FoundX, FoundY, TempZ, 0, 0, 0, -1, -1, playerid, 100.0);
-    if(objectid == INVALID_OBJECT_ID) return false;
+    if(objectid == INVALID_STREAMER_ID || objectid == INVALID_OBJECT_ID) return false; //Streamer returns 0 on failure
+    if(objectid >= MAX_BOMB_OBJECTS) {
+        DestroyDynamicObject(objectid); //Can't track it, so don't drop it
+        return false;
+    }
     BombOjectToPlayerid[objectid] = playerid;
     MoveDynamicObject(objectid, FoundX, FoundY, FoundZ+1, 20.0);
     Streamer_Update(playerid);
